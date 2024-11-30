@@ -1,0 +1,262 @@
+package com.calculator;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class Calculator extends JFrame {
+
+    private static final long serialVersionUID = 1L;
+    private JTextField display;
+    private double result = 0;
+    private String operator = "=";
+    private boolean isOperatorPressed = false;
+    private boolean isDegreeMode = true; // True for degrees, false for radians
+    private boolean isScientificMode = true; // Default to Scientific mode initially
+
+    public static void main(String[] args) {
+        EventQueue.invokeLater(new Runnable() {
+            public void run() {
+                try {
+                    Calculator frame = new Calculator();
+                    frame.setVisible(true);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    public Calculator() {
+        setTitle("Scientific Calculator");
+        setBounds(100, 100, 500, 700);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        JPanel contentPane = new JPanel();
+        contentPane.setLayout(null);
+        setContentPane(contentPane);
+
+        display = new JTextField();
+        display.setFont(new Font("Arial", Font.BOLD, 20));
+        display.setBounds(10, 10, 460, 50);
+        display.setHorizontalAlignment(JTextField.RIGHT);
+        display.setEditable(false);
+        contentPane.add(display);
+
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new GridLayout(8, 4, 10, 10));  // Added an extra row for mode button
+        buttonPanel.setBounds(10, 70, 460, 580);
+        contentPane.add(buttonPanel);
+
+        String[] basicButtonLabels = {
+            "7", "8", "9", "/",
+            "4", "5", "6", "*",
+            "1", "2", "3", "-",
+            "C", "0", "=", "+",
+        };
+
+        String[] scientificButtonLabels = {
+            "sin", "cos", "tan", "sqrt",
+            "cot", "sec", "csc", "^",
+            "log", "ln", "π", "1/x",
+            "deg/rad", "e"
+        };
+
+        // Add a toggle button for switching between Scientific and Basic modes
+        JButton modeButton = new JButton("Switch to Basic");
+        modeButton.setFont(new Font("Arial", Font.BOLD, 16));
+        modeButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                isScientificMode = !isScientificMode;  // Toggle the mode
+                toggleMode(modeButton);
+            }
+        });
+        contentPane.add(modeButton);
+        modeButton.setBounds(10, 60, 460, 30); // Position for mode button
+
+        // Add Scientific Calculator buttons, but hide them initially
+        for (String label : scientificButtonLabels) {
+            JButton button = new JButton(label);
+            button.setFont(new Font("Arial", Font.BOLD, 16));
+            button.addActionListener(new ButtonClickListener());
+            buttonPanel.add(button);
+            button.setVisible(isScientificMode); // Initially show Scientific buttons based on mode
+        }
+
+        // Add Basic Calculator buttons
+        for (String label : basicButtonLabels) {
+            JButton button = new JButton(label);
+            button.setFont(new Font("Arial", Font.BOLD, 16));
+            button.addActionListener(new ButtonClickListener());
+            buttonPanel.add(button);
+        }
+
+        // Add the degree/radian toggle button
+        JButton degRadButton = new JButton("deg/rad");
+        degRadButton.setFont(new Font("Arial", Font.BOLD, 16));
+        degRadButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                isDegreeMode = !isDegreeMode;  // Toggle degree/radian mode
+                String mode = isDegreeMode ? "Degrees" : "Radians";
+                display.setText(mode);
+                isOperatorPressed = true;
+            }
+        });
+        buttonPanel.add(degRadButton);
+    }
+
+    // Toggle between Basic and Scientific mode
+    private void toggleMode(JButton modeButton) {
+        Component[] components = getContentPane().getComponents();
+        for (Component comp : components) {
+            if (comp instanceof JPanel) {
+                JPanel panel = (JPanel) comp;
+                for (Component button : panel.getComponents()) {
+                    if (button instanceof JButton) {
+                        JButton btn = (JButton) button;
+                        // Show or hide scientific buttons based on mode
+                        if (btn.getText().equals("sin") || btn.getText().equals("cos") || btn.getText().equals("tan") ||
+                            btn.getText().equals("sqrt") || btn.getText().equals("cot") || btn.getText().equals("sec") ||
+                            btn.getText().equals("csc") || btn.getText().equals("^") || btn.getText().equals("log") ||
+                            btn.getText().equals("ln") || btn.getText().equals("π") || btn.getText().equals("1/x") ||
+                            btn.getText().equals("deg/rad") || btn.getText().equals("e")) {
+                            btn.setVisible(isScientificMode);  // Show/hide based on mode
+                        }
+                    }
+                }
+            }
+        }
+        // Update the mode button text
+        if (isScientificMode) {
+            modeButton.setText("Switch to Basic");
+        } else {
+            modeButton.setText("Switch to Scientific");
+        }
+    }
+
+    private void calculate(String newOperator) {
+        double currentNumber = parseInput(display.getText());
+        switch (operator) {
+            case "=":
+                result = currentNumber;
+                break;
+            case "+":
+                result += currentNumber;
+                break;
+            case "-":
+                result -= currentNumber;
+                break;
+            case "*":
+                result *= currentNumber;
+                break;
+            case "/":
+                if (currentNumber != 0) {
+                    result /= currentNumber;
+                } else {
+                    display.setText("Error");
+                    return;
+                }
+                break;
+            case "^":
+                result = Math.pow(result, currentNumber);
+                break;
+        }
+        display.setText(String.valueOf(result));
+        operator = newOperator;
+        isOperatorPressed = true;
+    }
+
+    private double parseInput(String input) {
+        if (input == null || input.isEmpty()) {
+            return 0;
+        }
+        try {
+            return Double.parseDouble(input);
+        } catch (NumberFormatException e) {
+            display.setText("Error");
+            return 0;
+        }
+    }
+
+    private double convertToRadians(double value) {
+        return isDegreeMode ? Math.toRadians(value) : value;  // Convert to radians if in degree mode
+    }
+
+    private class ButtonClickListener implements ActionListener {
+        public void actionPerformed(ActionEvent e) {
+            String command = e.getActionCommand();
+
+            if (command.matches("\\d") || command.equals(".")) {
+                // If an operator was pressed, clear the display for the new input
+                if (isOperatorPressed) {
+                    display.setText(""); // Clear display when a new number is entered after an operator
+                    isOperatorPressed = false;
+                }
+                display.setText(display.getText() + command); // Add the number or decimal
+            } else if (command.equals("C")) {
+                display.setText(""); // Clear the display
+                result = 0;
+                operator = "=";
+            } else if (command.equals("=")) {
+                calculate("=");
+                display.setText(String.valueOf(result));
+            } else if (command.equals("sin")) {
+                result = Math.sin(convertToRadians(parseInput(display.getText())));
+                display.setText(String.valueOf(result));
+                isOperatorPressed = true;
+            } else if (command.equals("cos")) {
+                result = Math.cos(convertToRadians(parseInput(display.getText())));
+                display.setText(String.valueOf(result));
+                isOperatorPressed = true;
+            } else if (command.equals("tan")) {
+                result = Math.tan(convertToRadians(parseInput(display.getText())));
+                display.setText(String.valueOf(result));
+                isOperatorPressed = true;
+            } else if (command.equals("cot")) {
+                result = 1 / Math.tan(convertToRadians(parseInput(display.getText())));
+                display.setText(String.valueOf(result));
+                isOperatorPressed = true;
+            } else if (command.equals("sec")) {
+                result = 1 / Math.cos(convertToRadians(parseInput(display.getText())));
+                display.setText(String.valueOf(result));
+                isOperatorPressed = true;
+            } else if (command.equals("csc")) {
+                result = 1 / Math.sin(convertToRadians(parseInput(display.getText())));
+                display.setText(String.valueOf(result));
+                isOperatorPressed = true;
+            } else if (command.equals("sqrt")) {
+                result = Math.sqrt(parseInput(display.getText()));
+                display.setText(String.valueOf(result));
+                isOperatorPressed = true;
+            } else if (command.equals("log")) {
+                result = Math.log10(parseInput(display.getText()));
+                display.setText(String.valueOf(result));
+                isOperatorPressed = true;
+            } else if (command.equals("ln")) {
+                result = Math.log(parseInput(display.getText()));
+                display.setText(String.valueOf(result));
+                isOperatorPressed = true;
+            } else if (command.equals("π")) {
+                display.setText(String.valueOf(Math.PI));
+                isOperatorPressed = true;
+            } else if (command.equals("e")) {
+                display.setText(String.valueOf(Math.E));
+                isOperatorPressed = true;
+            } else if (command.equals("1/x")) {
+                result = 1 / parseInput(display.getText());
+                display.setText(String.valueOf(result));
+                isOperatorPressed = true;
+            } else if (command.equals("deg/rad")) {
+                isDegreeMode = !isDegreeMode;
+                String mode = isDegreeMode ? "Degrees" : "Radians";
+                display.setText(mode);
+                isOperatorPressed = true;
+            } else {
+                calculate(command); // Handle basic arithmetic operations
+            }
+        }
+    }
+}
